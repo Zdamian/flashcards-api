@@ -172,7 +172,7 @@ var data = [{
 
 data.forEach(function(item) {
 
-    var category = new Category([
+    var category = new Category(
         {
             category: item.category,
           	words: item.words
@@ -184,7 +184,7 @@ data.forEach(function(item) {
 //                 }
 //             ]
         }
-    ]);
+    );
 
     category.save(function(err, category) {
         if (err) {
