@@ -20,10 +20,11 @@ API uses MongoDB as a database. Before running server be sure you have installed
 To clone this repo and run API simply run the following commands
 ```bash
 >> git clone git@github.com:Zdamian/flashcards-api.git
->> cd music-api
+>> cd flashcards-api
 >> npm install
->> npm run loaddata
+>> npm run loadcategories
+>> npm run loadwords
 >> nodemon
 ```
-After `npm run loaddata` you should press `Ctrl+C` to exit and then run `nodemon`
+After `npm run loadcategories` and `npm run loadwords` you should press `Ctrl+C` to exit and then run `nodemon`
 

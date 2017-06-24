@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "loaddata": "node fixtures/loaddata.js"
+    "loadwords": "node fixtures/load.words.js",
+    "loadcategories": "node fixtures/load.categories.js"
   },
   "author": "",
   "license": "ISC",
