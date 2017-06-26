@@ -10,6 +10,14 @@ var app = express();
 
 
 /**
+ * utils
+ */
+function error(res, status, message) {
+    res.status(status).send({status: status, error: message});
+}
+
+
+/**
  * DB connection
  */
 
@@ -23,7 +31,7 @@ mongoose.connect('mongodb://localhost/flashcard_db');
 
 app.use(bodyParser.json());
 
-app.all('/*', function(req, res, next) {
+app.all('/*', (req, res, next) => {
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Headers", 'Content-Type, X-Requested-With, authorization, X-BM-Filename');
     res.header("Access-Control-Expose-Headers", "Accept-Ranges, Content-Encoding, Content-Length, Content-Range");
@@ -31,11 +39,11 @@ app.all('/*', function(req, res, next) {
     next();
 });
 
-app.options("*", function(req, res) {
+app.options("*", (req, res) => {
     res.send(200);
 });
 
-app.all('*', function(req, res, next) {
+app.all('*', (req, res, next) => {
     setTimeout(next, 1000);
 });
 
@@ -45,20 +53,20 @@ app.all('*', function(req, res, next) {
  * FlashCards API
  */
 // http://127.0.0.1:5551/flashcards/work
-app.get('/flashcards/:category', function(req, res) {
+app.get('/flashcards/:category', (req, res) => {
     Category.find({
         name: req.params.category
-    }, function(err, entity) {
+    }, (err, entity) => {
         if (err) {
-            res.status(400).send({status: 400, error: "error message"});
+            error(res, 404, "Category not found");
         } else {
             Word.find({
                 category: entity
             })
             .populate('category')
-            .exec(function(err, entities) {
+            .exec((err, entities) => {
                 if (err) {
-                    res.status(400).send({status: 400, error: "error message"});
+                    error(res, 400, "Server error");
                 } else {
                     res.send(entities)
                 }
@@ -73,80 +81,88 @@ app.get('/flashcards/:category', function(req, res) {
  * Categories API
  */
 
-app.get('/categories', function(req, res) {
-    Category.find({}, function(err, entities) {
+app.get('/categories', (req, res) => {
+    Category.find({}, (err, entities) => {
         if (err) {
-            res.status(400).send({status: 400, error: "error message"});
+            error(res, 400, "Server error");
         } else {
             res.send(entities);
         }
     });
 });
 
-app.get('/categories/:id', function(req, res) {
-    Category.findById(req.params.id, function(err, entity) {
+app.get('/categories/:id', (req, res) => {
+    Category.findById(req.params.id, (err, entity) => {
         if (err) {
-            res.status(400).send({status: 400, error: "error message"});
+            error(res, 404, "Category not found");
         } else {
             res.send(entity);
         }
     });
 });
 
-app.post('/categories', function(req, res) {
-    var newCategory = new Category({
-        name: req.body.name
-    });
+app.post('/categories', (req, res) => {
+    if (!req.body.name) {
+        error(res, 400, "Validation error");
+    } else {
+        var newCategory = new Category({
+            name: req.body.name
+        });
 
-    newCategory.save(function(err, entity) {
-        if (err) {
-            res.status(400).send({status: 400, error: "error message"});
-        } else {
-            res.send(entity);
-        }
-    });
+        newCategory.save((err, entity) => {
+            if (err) {
+                error(res, 400, "Server error");
+            } else {
+                res.send(entity);
+            }
+        });
+    }
 });
 
-app.put('/categories/:id', function(req, res) {
-    Category.findById(req.params.id, function(err, updatedCategory) {
-        if (err) {
-            res.status(400).send({status: 400, error: "error message"});
-        } else {
-            updatedCategory.name = req.body.name;
-            updatedCategory.save(function(err, entity) {
-                if (err) {
-                    res.status(400).send({status: 400, error: "error message"});
-                } else {
-                    res.send(entity);
-                }
-            });
-        }
-    });
+app.put('/categories/:id', (req, res) => {
+    if (!req.body.name) {
+        error(res, 400, "Validation error");
+    } else {
+        Category.findById(req.params.id, (err, updated) => {
+            if (err) {
+                error(res, 404, "Category not found");
+            } else {
+                updated.name = req.body.name;
+                updated.save((err, entity) => {
+                    if (err) {
+                        error(res, 400, "Server error");
+                    } else {
+                        res.send(entity);
+                    }
+                });
+            }
+        });
+    }
 });
 
-app.delete('/categories/:id', function(req, res) {
-    Category.findById(req.params.id, function(err, entity) {
+app.delete('/categories/:id', (req, res) => {
+    Category.findById(req.params.id, (err, entity) => {
         if (err) {
-            res.status(400).send({status: 400, error: "error message"});
+            error(res, 404, "Category not found");
         } else {
             Word.find({
                 category: entity
             })
             .populate('category')
-            .exec(function(err, entities) {
+            .exec((err, entities) => {
                 if (err) {
-                    res.status(400).send({status: 400, error: "error message"});
+                    error(res, 400, "Server error");
                 } else {
                     if (entities.length === 0) {
-                        Category.findByIdAndRemove(req.params.id, function(err) {
+                        Category.findByIdAndRemove(req.params.id, (err) => {
                             if (err) {
-                                res.status(400).send({status: 400, error: "error message"});
+                                error(res, 404, "Category not found");
                             } else {
                                 res.send({});
                             }
                         });
                     } else {
-                        res.status(400).send({status: 400, error: "error message"});
+                        error(res, 400, "Cannot delete");
                     }
                 }
             });
@@ -160,35 +176,35 @@ app.delete('/categories/:id', function(req, res) {
  * Words API
  */
 
-app.get('/words', function(req, res) {
+app.get('/words', (req, res) => {
     Word.find({})
     .populate('category')
-    .exec(function(err, entities) {
+    .exec((err, entities) => {
         if (err) {
-            res.status(400).send({status: 400, error: "error message"});
+            error(res, 400, "Server error");
         } else {
             res.send(entities);
         }
     });
 });
 
-app.get('/words/:id', function(req, res) {
+app.get('/words/:id', (req, res) => {
     Word.findById(req.params.id)
         .populate('category')
-        .exec(function(err, entity) {
+        .exec((err, entity) => {
             if (err) {
-                res.status(400).send({status: 400, error: "error message"});
+                error(res, 404, "Word not found");
             } else {
                 res.send(entity);
             }
         });
 });
 
-app.post('/words', function(req, res) {
+app.post('/words', (req, res) => {
     if (req.body.categoryId && req.body.polish && req.body.english) {
-        Category.findById(req.body.categoryId, function(err, category) {
+        Category.findById(req.body.categoryId, (err, category) => {
             if (err) {
-                res.status(400).send({status: 400, error: "error message"});
+                error(res, 404, "Category not found");
             } else {
                 let word = new Word({
                     polish: req.body.polish,
@@ -197,76 +213,111 @@ app.post('/words', function(req, res) {
                     category: category
                 });
 
-                word.save(function(err, entity) {
+                word.save((err, saved) => {
                     if (err) {
-                        res.status(400).send({status: 400, error: "error message"});
+                        error(res, 400, "Server error");
                     } else {
-                        res.send(entity);
+                        Word.findById(saved._id)
+                            .populate('category')
+                            .exec((err, entity) => {
+                                if (err) {
+                                    error(res, 404, "Word not found");
+                                } else {
+                                    res.send(entity);
+                                }
+                            });
                     }
                 });
             }
         });
     } else {
-        res.status(400).send({status: 400, error: "error message"});
+        error(res, 400, "Validation error");
     }
 });
 
-app.put('/words/:id', function(req, res) {
-    Word.findById(req.params.id, function(err, entity) {
-        if (err) {
-            res.status(400).send({status: 400, error: "error message"});
-        } else {
-            if (!req.body.categoryId) {
-                let edit = false;
-                if (req.body.polish) {
-                    entity.polish = req.body.polish;
-                    edit = true;
-                }
-                if (req.body.english) {
-                    entity.english = req.body.english;
-                    edit = true;
-                }
-                if (req.body.known !== undefined) {
-                    entity.known = req.body.known;
-                    edit = true;
-                }
+app.put('/words/:id', (req, res) => {
+    if (req.body.categoryId || req.body.polish || req.body.english || req.body.known !== undefined) {
+        Word.findById(req.params.id, (err, entity) => {
+            if (err) {
+                error(res, 404, "Word not found");
+            } else {
+                if (!req.body.categoryId) {
 
-                if (edit) {
-                    entity.save(function(err, word) {
+                    if (req.body.polish) {
+                        entity.polish = req.body.polish;
+                    }
+
+                    if (req.body.english) {
+                        entity.english = req.body.english;
+                    }
+
+                    if (req.body.known !== undefined) {
+                        entity.known = req.body.known;
+                    }
+
+                    entity.save((err, saved) => {
                         if (err) {
-                            res.status(400).send({status: 400, error: "error message"});
+                            error(res, 400, "Server error");
                         } else {
-                            res.send(word);
+                            Word.findById(saved._id)
+                                .populate('category')
+                                .exec((err, entity) => {
+                                    if (err) {
+                                        error(res, 404, "Word not found");
+                                    } else {
+                                        res.send(entity);
+                                    }
+                                });
                         }
                     });
                 } else {
-                    res.status(400).send({status: 400, error: "error message"});
-                }
-            } else {
-                Category.findById(req.body.categoryId, function(err, category) {
-                    if (err) {
-                        res.status(400).send({status: 400, error: "error message"});
-                    } else {
-                        entity.category = categoty;
-                        entity.save(function(err, word) {
-                            if (err) {
-                                res.status(400).send({status: 400, error: "error message"});
-                            } else {
-                                res.send(word);
+                    Category.findById(req.body.categoryId, (err, category) => {
+                        if (err) {
+                            error(res, 404, "Category not found");
+                        } else {
+                            entity.category = category;
+
+                            if (req.body.polish) {
+                                entity.polish = req.body.polish;
                             }
-                        });
-                    }
-                });
+
+                            if (req.body.english) {
+                                entity.english = req.body.english;
+                            }
+
+                            if (req.body.known !== undefined) {
+                                entity.known = req.body.known;
+                            }
+
+                            entity.save((err, saved) => {
+                                if (err) {
+                                    error(res, 400, "Server error");
+                                } else {
+                                    Word.findById(saved._id)
+                                        .populate('category')
+                                        .exec((err, entity) => {
+                                            if (err) {
+                                                error(res, 404, "Word not found");
+                                            } else {
+                                                res.send(entity);
+                                            }
+                                        });
+                                }
+                            });
+                        }
+                    });
+                }
             }
-        }
-    });
+        });
+    } else {
+        error(res, 400, "Validation error");
+    }
 });
 
-app.delete('/words/:id', function(req, res) {
-
-    Word.findByIdAndRemove(req.params.id, function(err) {
+app.delete('/words/:id', (req, res) => {
+    Word.findByIdAndRemove(req.params.id, (err) => {
         if (err) {
-            res.status(400).send({status: 400, error: "error message"});
+            error(res, 404, "Word not found");
         } else {
             res.send({});
         }
@@ -279,6 +330,6 @@ app.delete('/words/:id', function(req, res) {
  * Run App
  */
 
-app.listen(5551, function(){
+app.listen(5551, () => {
     console.log('Node server is run on port 5551');
 });
