@@ -5,7 +5,7 @@ var Category = require('../model/Category');
 mongoose.connect('mongodb://localhost/flashcard_db');
 
 var categories = [
-    "home", "eating", "family", "weather", "work"
+    "home", "eating", "family", "weather", "work", "numbers", "colours", "days", "months", "war", "fantasy", "transport", "sounds", "travelling"
 ];
 
 categories.forEach(function(category) {
